@@ -14,6 +14,7 @@ import pickle
 
 # Download necessary NLTK data
 nltk.download(['punkt', 'wordnet', 'stopwords'])
+nltk.download('punkt', force=True)
 # Set a custom NLTK data path (e.g., within your project directory)
 nltk.data.path.append(os.path.join(os.getcwd(), 'nltk_data'))
 
