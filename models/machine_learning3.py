@@ -94,66 +94,66 @@ def train_model():
     with open(VECTORIZER_PATH, 'wb') as f:
         pickle.dump(tfidf_vectorizer, f)
 
-# Highlight sentence based on sentiment scores from logistic regression coefficients
-def highlight_sentence_html(sentence: str, lr_model, tfidf_vectorizer):
-    """
-    Generate HTML with highlighted words based on logistic regression predictions.
-    """
+# Highlight sentence based on sentiment scores
+def highlight_sentence_html(sentence: str, sentiment_dict: dict, similarity_threshold=0.5):
+    """Generate HTML with highlighted words based on sentiment scores."""
     words = sentence.split()
     highlighted_words = []
 
     for word in words:
-        # Preprocess each word
-        processed_word = clear_content(word)
+        clean_word = word.lower().strip('.,!?;:()[]{}""\'')
+        value = sentiment_dict.get(clean_word, 0)  # Get sentiment score for the word
         
-        # Transform the word using TF-IDF vectorizer
-        transformed_word = tfidf_vectorizer.transform([processed_word])
-        
-        # Predict probabilities for positive and negative sentiment
-        probabilities = lr_model.predict_proba(transformed_word)[0]
-        
-        # Highlight word based on sentiment probabilities
-        positive_prob = probabilities[lr_model.classes_.tolist().index('positive')]
-        negative_prob = probabilities[lr_model.classes_.tolist().index('negative')]
-
-        if positive_prob > negative_prob:
-            # Positive word -> green background color
-            brightness = int(255 * positive_prob)
-            color = f"rgb({brightness}, 255, {brightness})"
-            highlighted_words.append(f'<span style="background-color: {color};">{word}</span>')
-        elif negative_prob > positive_prob:
+        if value < 0:
             # Negative word -> red background color
-            brightness = int(255 * negative_prob)
+            brightness = 255 - int(abs(value) * 255)
             color = f"rgb(255, {brightness}, {brightness})"
             highlighted_words.append(f'<span style="background-color: {color};">{word}</span>')
+        elif value > 0:
+            # Positive word -> green background color
+            brightness = 255 - int(value * 255)
+            color = f"rgb({brightness}, 255, {brightness})"
+            highlighted_words.append(f'<span style="background-color: {color};">{word}</span>')
         else:
-            # Neutral word -> no highlight
-            highlighted_words.append(word)
-
+            highlighted_words.append(word)  # Neutral or unmatched word
+    
     return ' '.join(highlighted_words)
 
-     
-def calculate_score_lr(review: str, lr_model, tfidf_vectorizer):
-    """
-    Calculate sentiment scores for a review using logistic regression and TF-IDF.
-    """
-    # Preprocess the review
-    processed_review = clear_content(review)
+import numpy as np
+
+def score_to_trans(x):
+    """Transformation function (2sigmoid(x)-1) that maps values to a number between +1 and -1."""
+    return 2 * 1 / (1 + np.exp(-x)) - 1
+
+def calculate_score_lr(new_input: str, positive_words: dict, negative_words: dict, similarity_threshold=0.5):
+    """Assign an adjusted weight of each fragment in new input."""
+    result = {}
+    new_review_cleared = clear_content(new_input)
+    new_review_list = new_review_cleared.split(" ")
+    agg_words = positive_words | negative_words  # Combine positive and negative words
     
-    # Transform the review using TF-IDF vectorizer
-    transformed_review = tfidf_vectorizer.transform([processed_review])
+    for frag in new_review_list:
+        acc_score = 0
+        matches = 0
+        for k, v in agg_words.items():
+            try:
+                similarity = word2vec_model.similarity(frag, k)
+                if similarity >= similarity_threshold:
+                    acc_score += similarity * v  # Generate new score for color
+                    matches += 1
+            except KeyError:
+                pass  # Skip fragments not in the model vocabulary
+        
+        result[frag] = 0 if matches == 0 else acc_score / matches
     
-    # Predict probabilities for positive and negative sentiment
-    probabilities = lr_model.predict_proba(transformed_review)[0]
+    # Generate transparency based on normal CDF
+    for w in result:
+        if result[w] != 0:  # Faster processing
+            result[w] = score_to_trans(result[w])
     
-    # Return sentiment probabilities (positive and negative)
-    return {
-        'positive': probabilities[lr_model.classes_.tolist().index('positive')],
-        'negative': probabilities[lr_model.classes_.tolist().index('negative')]
-    }
+    return result
 
 
-
+# Example usage (only when running this script directly)
 if __name__ == '__main__':
     train_model()
-    print("Model training completed.")

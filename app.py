@@ -1,79 +1,99 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import pandas as pd
-import re
-from google_play_scraper import app
-from sklearn.feature_extraction.text import TfidfVectorizer
 import pickle
-import nltk
-from nltk.tokenize import word_tokenize
-from nltk.corpus import stopwords
-from nltk.stem import WordNetLemmatizer
-import contractions
+import os
+from models.machine_learning import highlight_sentence_html, calculate_score_lr, clear_content
 
-nltk.download(['punkt', 'wordnet', 'stopwords'])
+# File paths
+MODEL_PATH = os.path.join('models', 'lr_model.pkl')
+VECTORIZER_PATH = os.path.join('models', 'tfidf_vectorizer.pkl')
 
-with open('models/lr_model.pkl', 'rb') as f:
+# Load logistic regression model
+with open(MODEL_PATH, 'rb') as f:
     lr_model = pickle.load(f)
 
-with open('models/tfidf_vectorizer.pkl', 'rb') as f:
-    tfidf = pickle.load(f)
+# Load TF-IDF vectorizer
+with open(VECTORIZER_PATH, 'rb') as f:
+    tfidf_vectorizer = pickle.load(f)
 
-def clear_content(content):
-    lemmatizer = WordNetLemmatizer()
-    stop_words = set(stopwords.words('english'))
+# Verify loaded objects
+print(type(lr_model))  # Should print <class 'sklearn.linear_model._logistic.LogisticRegression'>
+print(type(tfidf_vectorizer))  # Should print <class 'sklearn.feature_extraction.text.TfidfVectorizer'>
+
+
+# Streamlit app title
+st.title("ReviewAssist: Google Play Store Review Analyzer")
+
+# Input for Google Play Store app URL or manual review entry
+st.sidebar.header("Input Options")
+input_mode = st.sidebar.radio("Choose Input Mode:", ["Google Play Store App URL", "Manual Review Input"])
+
+if input_mode == "Google Play Store App URL":
+    # Input for Google Play Store app URL
+    app_url = st.text_input("Enter the Google Play Store app URL:")
     
-    content = contractions.fix(content)
-    content = content.lower()
-    content = re.sub(r'[^a-zA-Z\s]', '', content)
-    tokens = word_tokenize(content)
-    
-    cleared = []
-    for word in tokens:
-        if (word not in stop_words) and len(word) > 2:
-            cleared.append(lemmatizer.lemmatize(word))
-    return ' '.join(cleared)
+    if app_url:
+        # Extract app ID from the URL (assuming a function exists for this)
+        def extract_app_id(url):
+            import re
+            match = re.search(r'id=([^&]+)', url)
+            return match.group(1) if match else None
 
-def extract_app_id(url):
-    match = re.search(r'id=([^&]+)', url)
-    return match.group(1) if match else None
-
-def get_app_reviews(app_id, count=100):
-    result = app(
-        app_id,
-        lang='en',
-        country='us'
-    )
-    reviews = result['reviews']
-    return pd.DataFrame(reviews, columns=['content', 'score'])
-
-def predict_sentiment_and_topic(review):
-    cleaned_review = clear_content(review)
-    vectorized_review = tfidf.transform([cleaned_review])
-    sentiment = lr_model.predict(vectorized_review)[0]
-    
-    word_importance = vectorized_review.toarray()[0] * tfidf.idf_
-    most_important_word_index = word_importance.argmax()
-    topic = tfidf.get_feature_names_out()[most_important_word_index]
-    
-    return sentiment, topic
-
-st.title("Google Play Store App Review Analyzer")
-
-app_url = st.text_input("Enter the Google Play Store app URL:")
-
-if app_url:
-    app_id = extract_app_id(app_url)
-    if app_id:
-        st.write(f"Analyzing reviews for app ID: {app_id}")
+        app_id = extract_app_id(app_url)
         
-        reviews_df = get_app_reviews(app_id)
-        
-        for _, review in reviews_df.iterrows():
-            sentiment, topic = predict_sentiment_and_topic(review['content'])
+        if not app_id:
+            st.error("Invalid Google Play Store URL.")
+        else:
+            st.write(f"Fetching reviews for App ID: {app_id}")
             
-            st.write("---")
-            st.write(f"Review: {review['content']}")
-            st.write(f"Topic: **{topic}**")
-            st.write(f"Sentiment: **{sentiment}**")
-    else:
-        st.error("Invalid Google Play Store URL. Please enter a valid URL.")
+            # Fetch reviews (assuming a function exists for this)
+            from google_play_scraper import reviews, Sort
+            
+            def get_app_reviews(app_id, count=100):
+                try:
+                    result, _ = reviews(
+                        app_id,
+                        lang='en',
+                        country='us',
+                        sort=Sort.NEWEST,
+                        count=count
+                    )
+                    reviews_data = [{'content': r.get('content', ''), 'score': r.get('score', None)} for r in result]
+                    return pd.DataFrame(reviews_data)
+                except Exception as e:
+                    st.error(f"Error fetching reviews: {e}")
+                    return pd.DataFrame(columns=['content', 'score'])
+
+            reviews_df = get_app_reviews(app_id)
+            
+            if not reviews_df.empty:
+                st.write(f"Fetched {len(reviews_df)} reviews.")
+                st.dataframe(reviews_df.head())
+
+                # Highlight the first review as an example
+                first_review = reviews_df['content'].iloc[0]
+                scores = calculate_score_lr(first_review, lr_model, tfidf_vectorizer)
+                highlighted_html = highlight_sentence_html(first_review, lr_model, tfidf_vectorizer)
+
+                # Display highlighted sentence
+                st.subheader("Highlighted Sentence")
+                components.html(highlighted_html, height=300, scrolling=True)
+            else:
+                st.warning("No reviews found.")
+else:
+    # Manual review input mode
+    new_review = st.text_area("Enter a review:", "This app is terrible and crashes constantly.")
+
+    if new_review:
+        # Preprocess and analyze the review
+        scores = calculate_score_lr(new_review, lr_model, tfidf_vectorizer)
+        highlighted_html = highlight_sentence_html(new_review, lr_model, tfidf_vectorizer)
+
+        # Display highlighted sentence
+        st.subheader("Highlighted Sentence")
+        components.html(highlighted_html, height=300, scrolling=True)
+
+# Footer information
+st.sidebar.markdown("---")
+st.sidebar.markdown("Developed by [Your Name](https://github.com/your-profile)")
