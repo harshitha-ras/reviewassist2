@@ -15,6 +15,12 @@ import pickle
 # Download necessary NLTK data
 nltk.download(['punkt', 'wordnet', 'stopwords'])
 
+# Set a custom NLTK data path (e.g., within your project directory)
+nltk.data.path.append(os.path.join(os.getcwd(), 'nltk_data'))
+
+# Download necessary resources
+nltk.download('punkt', download_dir=os.path.join(os.getcwd(), 'nltk_data'))
+
 # File paths
 DATA_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'sentiment-analysis-dataset-google-play-app-reviews.csv')
 
