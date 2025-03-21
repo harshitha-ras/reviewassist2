@@ -4,6 +4,7 @@ import pandas as pd
 import pickle
 import os
 from models.machine_learning import highlight_sentence_html, calculate_score_lr, clear_content
+from models.naive import calculate_score_nb, NB_MODEL_PATH, NB_VECTORIZER_PATH
 
 # File paths
 MODEL_PATH = os.path.join('models', 'lr_model.pkl')
@@ -17,9 +18,13 @@ with open(MODEL_PATH, 'rb') as f:
 with open(VECTORIZER_PATH, 'rb') as f:
     tfidf_vectorizer = pickle.load(f)
 
-# Verify loaded objects
-print(type(lr_model))  # Should print <class 'sklearn.linear_model._logistic.LogisticRegression'>
-print(type(tfidf_vectorizer))  # Should print <class 'sklearn.feature_extraction.text.TfidfVectorizer'>
+# Load Naive Bayes model
+with open(NB_MODEL_PATH, 'rb') as f:
+    nb_model = pickle.load(f)
+
+# Load Naive Bayes vectorizer
+with open(NB_VECTORIZER_PATH, 'rb') as f:
+    nb_vectorizer = pickle.load(f)
 
 
 # Streamlit app title
@@ -73,12 +78,25 @@ if input_mode == "Google Play Store App URL":
 
                 # Highlight the first review as an example
                 first_review = reviews_df['content'].iloc[0]
-                scores = calculate_score_lr(first_review, lr_model, tfidf_vectorizer)
-                highlighted_html = highlight_sentence_html(first_review, lr_model, tfidf_vectorizer)
+                scores_lr = calculate_score_lr(first_review, lr_model, tfidf_vectorizer)
+                scores_nb = calculate_score_nb(first_review, nb_model, nb_vectorizer)
+                highlighted_html_lr = highlight_sentence_html(first_review, lr_model, tfidf_vectorizer)
 
                 # Display highlighted sentence
-                st.subheader("Highlighted Sentence")
-                components.html(highlighted_html, height=300, scrolling=True)
+                st.subheader("Highlighted Sentence (Logistic Regression)")
+                components.html(highlighted_html_lr, height=300, scrolling=True)
+
+                # Display sentiment scores comparison
+                st.subheader("Sentiment Scores Comparison")
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.write("Logistic Regression:")
+                    st.write(f"Positive: {scores_lr['positive']:.2f}")
+                    st.write(f"Negative: {scores_lr['negative']:.2f}")
+                with col2:
+                    st.write("Naive Bayes:")
+                    st.write(f"Positive: {scores_nb['positive']:.2f}")
+                    st.write(f"Negative: {scores_nb['negative']:.2f}")
             else:
                 st.warning("No reviews found.")
 else:
@@ -87,12 +105,21 @@ else:
 
     if new_review:
         # Preprocess and analyze the review
-        scores = calculate_score_lr(new_review, lr_model, tfidf_vectorizer)
-        highlighted_html = highlight_sentence_html(new_review, lr_model, tfidf_vectorizer)
+        scores_lr = calculate_score_lr(new_review, lr_model, tfidf_vectorizer)
+        scores_nb = calculate_score_nb(new_review, nb_model, nb_vectorizer)
+        highlighted_html_lr = highlight_sentence_html(new_review, lr_model, tfidf_vectorizer)
 
         # Display highlighted sentence
-        st.subheader("Highlighted Sentence")
-        components.html(highlighted_html, height=300, scrolling=True)
+        st.subheader("Highlighted Sentence (Logistic Regression)")
+        components.html(highlighted_html_lr, height=300, scrolling=True)
+
+        # Display sentiment scores comparison
+        st.subheader("Sentiment Scores Comparison")
+        col1, col2 = st.columns(2)
+        with col1:
+            st.write("Logistic Regression:")
+            st.write(f"Positive: {scores_lr['positive']:.2f}")
+            st.write(f"Negative: {scores_lr['negative']:.2f}")
 
 # Footer information
 st.sidebar.markdown("---")
