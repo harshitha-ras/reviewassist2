@@ -18,20 +18,8 @@ from nltk.corpus import WordListCorpusReader as wn
 from nltk.stem import WordNetLemmatizer
 from nltk.corpus import wordnet
 
-def download_nltk_resources():
-    try:
-        nltk.data.find('tokenizers/punkt')
-    except LookupError:
-        nltk.download('punkt')
-
-# Download necessary NLTK data
-nltk.download(['punkt', 'wordnet', 'stopwords'])
-nltk.download('punkt', force=True)
-# Set a custom NLTK data path (e.g., within your project directory)
-nltk.data.path.append(os.path.join(os.getcwd(), 'nltk_data'))
-
-# Download necessary resources
-nltk.download('punkt', download_dir=os.path.join(os.getcwd(), 'nltk_data'))
+nltk_data_dir = os.path.join(os.path.dirname(__file__), 'nltk_data')
+nltk.data.path.append('nltk_data/tokenizers/punkt')
 
 # File paths
 DATA_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'sentiment-analysis-dataset-google-play-app-reviews.csv')
@@ -239,9 +227,6 @@ def train_naive_bayes():
         pickle.dump(count_vectorizer, f)
 
 if __name__ == '__main__':
-    download_nltk_resources()
-    nltk.download('wordnet')
-    nltk.download('popular')
     wordnet.ensure_loaded()
     train_model()
     train_naive_bayes()
