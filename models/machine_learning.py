@@ -14,6 +14,15 @@ import pickle
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.naive_bayes import MultinomialNB
 from rake_nltk import Rake
+from nltk.corpus import WordListCorpusReader as wn
+from nltk.stem import WordNetLemmatizer
+from nltk.corpus import wordnet
+
+def download_nltk_resources():
+    try:
+        nltk.data.find('tokenizers/punkt')
+    except LookupError:
+        nltk.download('punkt')
 
 # Download necessary NLTK data
 nltk.download(['punkt', 'wordnet', 'stopwords'])
@@ -230,6 +239,10 @@ def train_naive_bayes():
         pickle.dump(count_vectorizer, f)
 
 if __name__ == '__main__':
+    download_nltk_resources()
+    nltk.download('wordnet')
+    nltk.download('popular')
+    wordnet.ensure_loaded()
     train_model()
     train_naive_bayes()
     print("Model training completed.")
