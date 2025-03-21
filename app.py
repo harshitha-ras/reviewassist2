@@ -143,7 +143,7 @@ if input_mode == "Google Play Store App URL":
             with col1:
                 st.subheader("Naive Bayes Analysis")
                 scores_nb = calculate_score_nb(new_review, nb_model, count_vectorizer)
-                highlighted_nb = f'<div style="background-color: white; padding: 10px; border-radius: 5px;">{highlight_sentence_nb_html(first_review, nb_model, count_vectorizer)}</div>'
+                highlighted_nb = f'<div style="background-color: white; padding: 10px; border-radius: 5px;">{highlight_sentence_nb_html(new_review, nb_model, count_vectorizer)}</div>'
                 components.html(highlighted_nb, height=300, scrolling=True)
                 st.write(f"Positive: {scores_nb['positive']:.2%}")
                 st.write(f"Negative: {scores_nb['negative']:.2%}")
@@ -151,7 +151,7 @@ if input_mode == "Google Play Store App URL":
             with col2:
                 st.subheader("Logistic Regression Analysis")
                 scores_lr = calculate_score_lr(new_review, lr_model, tfidf_vectorizer)
-                highlighted_lr = f'<div style="background-color: white; padding: 10px; border-radius: 5px;">{highlight_sentence_html(first_review, lr_model, tfidf_vectorizer)}</div>'
+                highlighted_lr = f'<div style="background-color: white; padding: 10px; border-radius: 5px;">{highlight_sentence_html(new_review, lr_model, tfidf_vectorizer)}</div>'
                 components.html(highlighted_lr, height=300, scrolling=True)
                 st.write(f"Positive: {scores_lr['positive']:.2%}")
                 st.write(f"Negative: {scores_lr['negative']:.2%}")
