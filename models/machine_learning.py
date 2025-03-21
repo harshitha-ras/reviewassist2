@@ -11,6 +11,8 @@ from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import classification_report
 import pickle
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.naive_bayes import MultinomialNB
 
 # Download necessary NLTK data
 nltk.download(['punkt', 'wordnet', 'stopwords'])
@@ -32,6 +34,8 @@ if not os.path.exists(DATA_PATH):
 df = pd.read_csv(DATA_PATH)
 MODEL_PATH = os.path.join('models', 'lr_model.pkl')
 VECTORIZER_PATH = os.path.join('models', 'tfidf_vectorizer.pkl')
+NB_MODEL_PATH = os.path.join('models', 'nb_model.pkl')
+NB_VECTORIZER_PATH = os.path.join('models', 'count_vectorizer.pkl')
 
 # Text preprocessing function
 def clear_content(content):
@@ -158,8 +162,68 @@ def calculate_score_lr(review: str, lr_model, tfidf_vectorizer):
         'negative': probabilities[lr_model.classes_.tolist().index('negative')]
     }
 
+NB_MODEL_PATH = os.path.join('models', 'nb_model.pkl')
+NB_VECTORIZER_PATH = os.path.join('models', 'count_vectorizer.pkl')
 
+def highlight_sentence_nb_html(sentence: str, nb_model, count_vectorizer):
+    """Naive Bayes version of highlighting"""
+    words = sentence.split()
+    vocab = count_vectorizer.vocabulary_
+    
+    highlighted_words = []
+    for word in words:
+        clean_word = clear_content(word)
+        if clean_word in vocab:
+            # Get log probabilities for each class
+            word_idx = vocab[clean_word]
+            log_prob_pos = nb_model.feature_log_prob_[0][word_idx]
+            log_prob_neg = nb_model.feature_log_prob_[1][word_idx]
+            
+            # Calculate intensity based on probability difference
+            intensity = abs(log_prob_pos - log_prob_neg)
+            if log_prob_pos > log_prob_neg:
+                color = f"hsl(120, 100%, {100 - (intensity*50)}%)"
+            else:
+                color = f"hsl(0, 100%, {100 - (intensity*50)}%)"
+                
+            highlighted_words.append(f'<span style="background-color: {color}">{word}</span>')
+        else:
+            highlighted_words.append(word)
+            
+    return ' '.join(highlighted_words)
+
+def calculate_score_nb(review: str, nb_model, count_vectorizer):
+    """Naive Bayes scoring"""
+    processed = clear_content(review)
+    transformed = count_vectorizer.transform([processed])
+    probs = nb_model.predict_proba(transformed)[0]
+    return {
+        'positive': probs[nb_model.classes_.tolist().index('positive')],
+        'negative': probs[nb_model.classes_.tolist().index('negative')]
+    }
+
+
+def train_naive_bayes():
+    """Train and save Naive Bayes model"""
+    df = load_data()
+    
+    # CountVectorizer instead of TF-IDF
+    count_vectorizer = CountVectorizer()
+    X = count_vectorizer.fit_transform(df['content'])
+    y = df['sentiment']
+
+    # Train Naive Bayes
+    nb_model = MultinomialNB()
+    nb_model.fit(X, y)
+
+    # Save model and vectorizer
+    with open(NB_MODEL_PATH, 'wb') as f:
+        pickle.dump(nb_model, f)
+        
+    with open(NB_VECTORIZER_PATH, 'wb') as f:
+        pickle.dump(count_vectorizer, f)
 
 if __name__ == '__main__':
     train_model()
+    train_naive_bayes()
     print("Model training completed.")
