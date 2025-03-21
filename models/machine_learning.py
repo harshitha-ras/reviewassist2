@@ -13,6 +13,7 @@ from sklearn.metrics import classification_report
 import pickle
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.naive_bayes import MultinomialNB
+from rake_nltk import Rake
 
 # Download necessary NLTK data
 nltk.download(['punkt', 'wordnet', 'stopwords'])
@@ -103,6 +104,11 @@ def train_model():
 
     with open(VECTORIZER_PATH, 'wb') as f:
         pickle.dump(tfidf_vectorizer, f)
+
+def extract_keywords_rake(text, num_keywords=5):
+    r = Rake()
+    r.extract_keywords_from_text(text)
+    return r.get_ranked_phrases()[:num_keywords]
 
 # Highlight sentence based on sentiment scores from logistic regression coefficients
 def highlight_sentence_html(sentence: str, lr_model, tfidf_vectorizer):

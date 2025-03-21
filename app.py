@@ -7,7 +7,8 @@ from models.machine_learning import (
     highlight_sentence_html, 
     calculate_score_lr,
     highlight_sentence_nb_html,  # New function for Naive Bayes
-    calculate_score_nb           # New function for Naive Bayes
+    calculate_score_nb,
+    extract_keywords_rake           # New function for Naive Bayes
 )
 
 # File paths
@@ -105,10 +106,18 @@ if input_mode == "Google Play Store App URL":
                 # Highlight the first review as an example
                 first_review = reviews_df['content'].iloc[0]
 
-                # Create two columns for comparison
-                col1, col2 = st.columns(2)
-                
+                # Create three columns for comparison
+                col1, col2, col3 = st.columns(3)
+
                 with col1:
+                    st.subheader("Naive Bayes Analysis")
+                    scores_nb = calculate_score_nb(first_review, nb_model, count_vectorizer)
+                    highlighted_nb = highlight_sentence_nb_html(first_review, nb_model, count_vectorizer)
+                    components.html(highlighted_nb, height=300, scrolling=True)
+                    st.write(f"Positive: {scores_nb['positive']:.2%}")
+                    st.write(f"Negative: {scores_nb['negative']:.2%}")
+
+                with col2:
                     st.subheader("Logistic Regression Analysis")
                     scores_lr = calculate_score_lr(first_review, lr_model, tfidf_vectorizer)
                     highlighted_lr = highlight_sentence_html(first_review, lr_model, tfidf_vectorizer)
@@ -116,35 +125,40 @@ if input_mode == "Google Play Store App URL":
                     st.write(f"Positive: {scores_lr['positive']:.2%}")
                     st.write(f"Negative: {scores_lr['negative']:.2%}")
 
-                with col2:
-                    st.subheader("Naive Bayes Analysis")
-                    scores_nb = calculate_score_nb(first_review, nb_model, count_vectorizer)
-                    highlighted_nb = highlight_sentence_nb_html(first_review, nb_model, count_vectorizer)
-                    components.html(highlighted_nb, height=300, scrolling=True)
-                    st.write(f"Positive: {scores_nb['positive']:.2%}")
-                    st.write(f"Negative: {scores_nb['negative']:.2%}")
-            else:
-                st.warning("No reviews found.")
-else:
-    # Manual review input mode
-    new_review = st.text_area("Enter a review:", "This app is terrible and crashes constantly.")
+                with col3:
+                    st.subheader("RAKE Keyword Extraction")
+                    keywords = extract_keywords_rake(first_review)
+                    st.write("Top 5 Keywords:")
+                    for keyword in keywords:
+                        st.write(f"- {keyword}")
 
-    if new_review:
-        # Create two columns for comparison
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.subheader("Logistic Regression Analysis")
-            scores_lr = calculate_score_lr(new_review, lr_model, tfidf_vectorizer)
-            highlighted_lr = highlight_sentence_html(new_review, lr_model, tfidf_vectorizer)
-            components.html(highlighted_lr, height=300, scrolling=True)
-            st.write(f"Positive: {scores_lr['positive']:.2%}")
-            st.write(f"Negative: {scores_lr['negative']:.2%}")
+    else:
+        # Manual review input mode
+        new_review = st.text_area("Enter a review:", "This app is terrible and crashes constantly.")
 
-        with col2:
-            st.subheader("Naive Bayes Analysis")
-            scores_nb = calculate_score_nb(new_review, nb_model, count_vectorizer)
-            highlighted_nb = highlight_sentence_nb_html(new_review, nb_model, count_vectorizer)
-            components.html(highlighted_nb, height=300, scrolling=True)
-            st.write(f"Positive: {scores_nb['positive']:.2%}")
-            st.write(f"Negative: {scores_nb['negative']:.2%}")
+        if new_review:
+            # Create three columns for comparison
+            col1, col2, col3 = st.columns(3)
+
+            with col1:
+                st.subheader("Naive Bayes Analysis")
+                scores_nb = calculate_score_nb(new_review, nb_model, count_vectorizer)
+                highlighted_nb = highlight_sentence_nb_html(new_review, nb_model, count_vectorizer)
+                components.html(highlighted_nb, height=300, scrolling=True)
+                st.write(f"Positive: {scores_nb['positive']:.2%}")
+                st.write(f"Negative: {scores_nb['negative']:.2%}")
+
+            with col2:
+                st.subheader("Logistic Regression Analysis")
+                scores_lr = calculate_score_lr(new_review, lr_model, tfidf_vectorizer)
+                highlighted_lr = highlight_sentence_html(new_review, lr_model, tfidf_vectorizer)
+                components.html(highlighted_lr, height=300, scrolling=True)
+                st.write(f"Positive: {scores_lr['positive']:.2%}")
+                st.write(f"Negative: {scores_lr['negative']:.2%}")
+
+            with col3:
+                st.subheader("RAKE Keyword Extraction")
+                keywords = extract_keywords_rake(new_review)
+                st.write("Top 5 Keywords:")
+                for keyword in keywords:
+                    st.write(f"- {keyword}")
