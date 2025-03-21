@@ -14,6 +14,7 @@ import pickle
 
 # Download necessary NLTK data
 nltk.download(['punkt', 'wordnet', 'stopwords'])
+nltk.download('punkt', force=True)
 
 # File paths
 DATA_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'sentiment-analysis-dataset-google-play-app-reviews.csv')
