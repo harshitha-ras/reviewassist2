@@ -35,24 +35,34 @@ VECTORIZER_PATH = os.path.join('models', 'tfidf_vectorizer.pkl')
 NB_MODEL_PATH = os.path.join('models', 'nb_model.pkl')
 NB_VECTORIZER_PATH = os.path.join('models', 'count_vectorizer.pkl')
 
-# Text preprocessing function
 def clear_content(content):
-    """Preprocess text by expanding contractions, lemmatizing, and removing special characters."""
+    """Preprocess text by expanding contractions, lemmatizing, and removing stopwords."""
+    
+    # Download required NLTK resources if not already downloaded
+    resources = ['punkt', 'stopwords', 'wordnet']
+    for resource in resources:
+        try:
+            nltk.data.find(f'{resource}')
+        except LookupError:
+            nltk.download(resource)
+    
+    # Initialize lemmatizer and stopwords
     lemmatizer = WordNetLemmatizer()
     stop_words = set(stopwords.words('english'))
     
-    # Step 1: Expand contractions (e.g., "can't" -> "cannot")
+    # Expand contractions
     content = contractions.fix(content)
     
-    # Step 2: Convert to lowercase and remove non-alphabetic characters
-    content = content.lower()
-    content = re.sub(r'[^a-z\s]', '', content)
-    
-    # Step 3: Tokenize and remove stopwords, then lemmatize words
+    # Tokenize the content
     tokens = word_tokenize(content)
-    processed_tokens = [lemmatizer.lemmatize(word) for word in tokens if word not in stop_words and len(word) > 2]
     
-    return ' '.join(processed_tokens)
+    # Remove stopwords and lemmatize tokens
+    filtered_tokens = [lemmatizer.lemmatize(token.lower()) for token in tokens if token.isalpha() and token.lower() not in stop_words]
+    
+    # Join the tokens back into a string
+    processed = ' '.join(filtered_tokens)
+    
+    return processed
 
 # Load dataset and preprocess it
 def load_data():
