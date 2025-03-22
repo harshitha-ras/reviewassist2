@@ -19,7 +19,7 @@ from nltk.stem import WordNetLemmatizer
 from nltk.corpus import wordnet
 
 nltk_data_dir = os.path.join(os.path.dirname(__file__), 'nltk_data')
-nltk.data.path.append('nltk_data/tokenizers/punkt')
+nltk.data.path.append('nltk_data/tokenizers/punkt/english.pickle')
 
 # File paths
 DATA_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'sentiment-analysis-dataset-google-play-app-reviews.csv')
