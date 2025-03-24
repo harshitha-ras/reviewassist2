@@ -39,7 +39,7 @@ def clear_content(content):
     """Preprocess text by expanding contractions, lemmatizing, and removing stopwords."""
     
     # Download required NLTK resources if not already downloaded
-    resources = ['punkt', 'stopwords', 'wordnet']
+    resources = ['punkt', 'stopwords', 'wordnet', 'omw-1.4', 'punkt_tab']
     for resource in resources:
         try:
             nltk.data.find(f'{resource}')
